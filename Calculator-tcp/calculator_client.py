@@ -15,15 +15,6 @@ while True:
     b = input("Enter second number: ")             # Read second value as text
     operation = input("Enter operation (add, sub, mul, div): ") # Read operation as text
 
-    try:
-        a = float(a)
-    except ValueError:
-        pass
-
-    try:
-        b = float(b)
-    except ValueError:
-        pass
 
     payload = {                                    # Create request dictionary
         "a": a,                                    # Store first value
