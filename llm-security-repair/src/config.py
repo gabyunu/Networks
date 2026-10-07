@@ -1,0 +1,4 @@
+import os
+
+MODEL = "MODEL_PROVIDED_BY_INSTRUCTOR"
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
