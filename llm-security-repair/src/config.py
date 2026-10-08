@@ -1,4 +1,4 @@
 import os
 
-MODEL = "MODEL_PROVIDED_BY_INSTRUCTOR"
+MODEL = "gpt-6-luna"
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
