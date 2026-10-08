@@ -1,0 +1,6 @@
+vuln_id,repo_url,fix_commit
+CVE-2020-6802,https://github.com/mozilla/bleach,f77e0f6392177a06e46a49abd61a4d9f035e57fd
+CVE-2021-23980,https://github.com/mozilla/bleach,79b7a3c5e56a09d1d323a5006afa59b56162eb13
+CVE-2021-28363,https://github.com/urllib3/urllib3,8d65ea1ecf6e2cdc27d42124e587c1b83a3118b0
+CVE-2021-32839,https://github.com/andialbrecht/sqlparse,8238a9e450ed1524e40cb3a8b0b3c00606903aeb
+CVE-2022-24065,https://github.com/cookiecutter/cookiecutter,fdffddb31fd2b46344dfa317531ff155e7999f77

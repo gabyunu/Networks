@@ -1,0 +1,6 @@
+vuln_id,repo_url,fix_commit
+CVE-2023-37271,https://github.com/zopefoundation/RestrictedPython,c8eca66ae49081f0016d2e1f094c3d72095ef531
+CVE-2023-41039,https://github.com/zopefoundation/RestrictedPython,4134aedcff17c977da7717693ed89ce56d54c120
+CVE-2023-41040,https://github.com/gitpython-developers/GitPython,74e55ee4544867e1bd976b7df5a45869ee397b0b
+CVE-2023-46446,https://github.com/ronf/asyncssh,83e43f5ea3470a8617fc388c72b062c7136efd7e
+CVE-2023-47163,https://github.com/remarshal-project/remarshal,fd6ac799a02f533c3fc243b49cdd6d21aa7ee494

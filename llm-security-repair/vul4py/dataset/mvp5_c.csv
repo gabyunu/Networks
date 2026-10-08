@@ -1,0 +1,6 @@
+vuln_id,repo_url,fix_commit
+CVE-2022-24439,https://github.com/gitpython-developers/GitPython,2625ed9fc074091c531c27ffcba7902771130261
+CVE-2022-2888,https://github.com/octoprint/octoprint,40e6217ac1a85cc5ed592873ae49db01d3005da4
+CVE-2022-29217,https://github.com/jpadilla/pyjwt,9c528670c455b8d948aff95ed50e22940d1ad3fc
+CVE-2022-3102,https://github.com/latchset/jwcrypto,f4e912f83cb578e2cd47f8a9398bf15f680bf558
+CVE-2023-23934,https://github.com/pallets/werkzeug,cf275f42acad1b5950c50ffe8ef58fe62cdce028
