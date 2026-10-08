@@ -105,9 +105,15 @@ def main():
                         indent=2,
                     )
 
-                print(
-                    f"[OK] {cve}: latency={latency_ms:.2f} ms"
-                )
+                print("\n" + "=" * 60)
+                print(f"CASE: {cve}")
+                print(f"FILE: {relative_file}")
+                print(f"CLAIM: {success_claim}")
+                print(f"CONFIDENCE: {confidence}")
+                print(f"LATENCY: {latency_ms:.2f} ms")
+                print("\nDIFF:")
+                print(patch)
+                print("=" * 60 + "\n")
 
             except Exception as e:
                 print(
