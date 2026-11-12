@@ -1,0 +1,9 @@
+MOBILE DATA RESULTS
+====================
+
+Average Latency: 117.82 ms
+Standard Deviation: 19.36 ms
+Jitter: 23.73 ms
+
+Latency Values:
+[119.0, 92.8, 117.0, 131.0, 165.0, 107.0, 97.4, 127.0, 113.0, 109.0]

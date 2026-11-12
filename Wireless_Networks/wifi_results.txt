@@ -1,0 +1,6 @@
+Average Latency: 40.70 ms
+Standard Deviation: 45.23 ms
+Jitter: 37.54 ms
+
+Latency Values:
+[18.6, 19.3, 19.5, 19.1, 171.0, 60.9, 26.5, 18.6, 34.8, 18.7]
