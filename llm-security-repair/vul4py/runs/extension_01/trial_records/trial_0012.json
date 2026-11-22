@@ -1,0 +1,12 @@
+{
+  "case": "CVE-2022-3102",
+  "model": "gpt-6-luna",
+  "repetition": 3,
+  "runs_root": "vul4py/runs/extension_01/model_01/repetition_03",
+  "trial_dir": "vul4py/runs/extension_01/model_01/repetition_03/gpt/CVE-2022-3102",
+  "generation_command_rc": 0,
+  "pipeline_status": "complete",
+  "reason": "",
+  "generation_status": "ready_for_verification",
+  "evaluation_command_rc": 0
+}

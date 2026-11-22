@@ -240,8 +240,8 @@ The current suite contains 25 tests covering planning, integrity,
 trial processing, evidence export and metric denominators.
 The tests use temporary files and simulated responses, without API calls.
 
-The extension has been checked through unit tests and a planning run;
-these checks are not evidence of a completed live batch experiment.
+The extension has been checked through unit tests, a controller/export
+integration simulation, and the live extension_01 experiment reported below.
 
 ### Extension limitations
 
@@ -256,3 +256,37 @@ additional benchmark cases.
 
 The example of 600 experiments describes possible future scale; it is
 not a result produced by this repository.
+
+## Completed extension_01 experiment
+
+The configurable controller executed a live experiment with five cases,
+one model (gpt-6-luna), and three independent attempts per case.
+
+All 15 observations were complete:
+- Positive repair claims: 15.
+- Verified repairs: 5.
+- False assurances: 10.
+- VRR = 5/15 = 33.33%.
+- FAR = 10/15 = 66.67%.
+
+Six patches were rejected before tests could run. Four other patches
+applied but failed both functional and security checks. Five patches
+applied and passed both checks.
+
+| Case | Verified repairs |
+|---|---|
+| CVE-2021-32839 | 2/3 |
+| CVE-2022-3102 | 0/3 |
+| CVE-2023-30608 | 0/3 |
+| CVE-2023-47163 | 0/3 |
+| CVE-2024-53861 | 3/3 |
+
+Complete means the attempt has a resolved verification outcome, not that
+the repair succeeded. Rejected patches have A=F=S=0 by protocol;
+their proposed code was not tested.
+
+Results and evidence are under vul4py/runs/extension_01/.
+The original five-attempt study remains separate.
+
+This extension demonstrates scaling through repetitions. It does not
+compare different models or establish performance across the full dataset.

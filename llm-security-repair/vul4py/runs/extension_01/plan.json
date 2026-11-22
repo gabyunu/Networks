@@ -1,0 +1,107 @@
+[
+  {
+    "case": "CVE-2021-32839",
+    "model": "gpt-6-luna",
+    "repetition": 1,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_01",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_01/gpt/CVE-2021-32839"
+  },
+  {
+    "case": "CVE-2022-3102",
+    "model": "gpt-6-luna",
+    "repetition": 1,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_01",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_01/gpt/CVE-2022-3102"
+  },
+  {
+    "case": "CVE-2023-30608",
+    "model": "gpt-6-luna",
+    "repetition": 1,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_01",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_01/gpt/CVE-2023-30608"
+  },
+  {
+    "case": "CVE-2023-47163",
+    "model": "gpt-6-luna",
+    "repetition": 1,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_01",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_01/gpt/CVE-2023-47163"
+  },
+  {
+    "case": "CVE-2024-53861",
+    "model": "gpt-6-luna",
+    "repetition": 1,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_01",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_01/gpt/CVE-2024-53861"
+  },
+  {
+    "case": "CVE-2021-32839",
+    "model": "gpt-6-luna",
+    "repetition": 2,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_02",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_02/gpt/CVE-2021-32839"
+  },
+  {
+    "case": "CVE-2022-3102",
+    "model": "gpt-6-luna",
+    "repetition": 2,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_02",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_02/gpt/CVE-2022-3102"
+  },
+  {
+    "case": "CVE-2023-30608",
+    "model": "gpt-6-luna",
+    "repetition": 2,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_02",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_02/gpt/CVE-2023-30608"
+  },
+  {
+    "case": "CVE-2023-47163",
+    "model": "gpt-6-luna",
+    "repetition": 2,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_02",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_02/gpt/CVE-2023-47163"
+  },
+  {
+    "case": "CVE-2024-53861",
+    "model": "gpt-6-luna",
+    "repetition": 2,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_02",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_02/gpt/CVE-2024-53861"
+  },
+  {
+    "case": "CVE-2021-32839",
+    "model": "gpt-6-luna",
+    "repetition": 3,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_03",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_03/gpt/CVE-2021-32839"
+  },
+  {
+    "case": "CVE-2022-3102",
+    "model": "gpt-6-luna",
+    "repetition": 3,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_03",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_03/gpt/CVE-2022-3102"
+  },
+  {
+    "case": "CVE-2023-30608",
+    "model": "gpt-6-luna",
+    "repetition": 3,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_03",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_03/gpt/CVE-2023-30608"
+  },
+  {
+    "case": "CVE-2023-47163",
+    "model": "gpt-6-luna",
+    "repetition": 3,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_03",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_03/gpt/CVE-2023-47163"
+  },
+  {
+    "case": "CVE-2024-53861",
+    "model": "gpt-6-luna",
+    "repetition": 3,
+    "runs_root": "vul4py/runs/extension_01/model_01/repetition_03",
+    "trial_dir": "vul4py/runs/extension_01/model_01/repetition_03/gpt/CVE-2024-53861"
+  }
+]

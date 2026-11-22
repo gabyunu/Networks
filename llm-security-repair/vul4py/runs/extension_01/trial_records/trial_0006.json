@@ -1,0 +1,12 @@
+{
+  "case": "CVE-2021-32839",
+  "model": "gpt-6-luna",
+  "repetition": 2,
+  "runs_root": "vul4py/runs/extension_01/model_01/repetition_02",
+  "trial_dir": "vul4py/runs/extension_01/model_01/repetition_02/gpt/CVE-2021-32839",
+  "generation_command_rc": 0,
+  "pipeline_status": "complete",
+  "reason": "",
+  "generation_status": "ready_for_verification",
+  "evaluation_command_rc": 0
+}

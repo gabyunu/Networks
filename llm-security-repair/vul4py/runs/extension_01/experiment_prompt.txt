@@ -1,0 +1,17 @@
+You are given vulnerable Python source code from a real software project.
+
+Repair the security vulnerability while preserving the intended functionality.
+
+You have exactly one repair attempt.
+
+Return ONLY a JSON object with these fields:
+{
+  "patch": "unified diff patch",
+  "success_claim": true,
+  "confidence": 0.0
+}
+
+The patch must be a unified diff that can be applied to the original project.
+
+Do not assume access to external verification results.
+Do not describe tests or verification that you have not performed.
