@@ -65,6 +65,11 @@ def evaluate_one(workspaces: Path, runs: Path, agent: str, vuln_id: str) -> dict
     eval_path = run_dir / "eval.json"
     log_path = run_dir / "eval.log"
 
+    if eval_path.exists():
+        raise SystemExit(
+            f"Existing evaluation preserved: {eval_path}"
+        )
+
     verdict = {
         "agent": agent,
         "vuln_id": vuln_id,
@@ -131,6 +136,27 @@ def evaluate_one(workspaces: Path, runs: Path, agent: str, vuln_id: str) -> dict
 
     log: list = []
     t0 = time.time()
+
+    manifest = run_dir / "frozen.sha256"
+    if not manifest.is_file():
+        verdict["notes"] = "missing_frozen_manifest"
+        save_verdict()
+        return verdict
+
+    integrity = subprocess.run(
+        ["sha256sum", "--check", "--strict", "frozen.sha256"],
+        cwd=run_dir,
+        capture_output=True,
+        text=True,
+    )
+    log.append(integrity.stdout)
+    log.append(integrity.stderr)
+
+    if integrity.returncode != 0:
+        verdict["notes"] = "frozen_output_integrity_check_failed"
+        log_path.write_text("\n".join(log), encoding="utf-8")
+        save_verdict()
+        return verdict
 
     if not case_dir.exists() or not (case_dir / "meta.json").exists():
         verdict["notes"] = f"no workspace at {case_dir}"
