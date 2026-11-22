@@ -10,15 +10,18 @@ This project compares an LLM's repair claims with independent Vul4Py verificatio
 | CVE-2022-3102 | Complete; existing evidence audited | 1 | 1 | 0 | 0 | 0 | 1 |
 | CVE-2023-30608 | Complete; patch rejected | 1 | 0 | 0 | 0 | 0 | 1 |
 | CVE-2023-47163 | Incomplete; invalid JSON response | — | — | — | — | — | — |
+| CVE-2024-53861 | Complete; malformed patch rejected | 1 | 0 | 0 | 0 | 0 | 1 |
 
-Four attempts are recorded. Three observations are complete.
-The fifth attempt required by the assignment remains pending.
+Five attempts are recorded. Four observations are complete.
+One attempt remains incomplete because the model returned invalid JSON.
 
-For the three completed observations:
+For the four completed observations:
 
-- VRR = 1 / 3 = 33.33%.
-- FAR = 2 / 3 = 66.67%.
-- All three completed observations contain positive repair claims.
+- VRR = 1 / 4 = 25.00%.
+- FAR = 3 / 4 = 75.00%.
+- All four completed observations contain positive repair claims.
+- Two false-assurance cases were patch-format rejections; their
+  proposed code could not undergo functional or security testing.
 
 These are preliminary results from a small sample.
 
@@ -53,21 +56,38 @@ The archived JUnit reports and logs support the historical audits.
 
 ## API generation
 
-The historical generation script is scripts/repair.py.
-Its fixed instructions are stored in PROMPT.
-
-It sends vulnerable source through the OpenAI Python client and requests:
-
-- a unified-diff patch;
-- success_claim;
-- confidence between 0 and 1.
+The current generator is vul4py/scripts/run_agent.py.
+The historical script scripts/repair.py supplied the fixed prompt now
+preserved in experiment_prompt.txt.
 
 The configured model identifier is gpt-6-luna.
 The API key is read from OPENAI_API_KEY.
 
-Existing responses belong to the recorded experiment and must be preserved.
-Future generation requires a separate run location and complete generation
-records before additional repair attempts are made.
+The GPT path sends vulnerable source and the preserved prompt using
+Responses API. It requests a JSON object containing patch, success_claim
+and confidence. Benchmark verification results are never included.
+
+SDK automatic retries are disabled. Existing run directories are refused.
+Historical responses in the default study are also protected.
+
+The fifth attempt was selected before generation:
+- Case: CVE-2024-53861.
+- Selection and implementation checkpoint: ddce733.
+- Input tokens: 3248.
+- Output tokens: 798.
+- Total tokens: 4046.
+- API latency: approximately 8391.09 ms.
+- Declared confidence: 0.98.
+- Outcome: patch rejected as malformed.
+
+Its run directory contains prompt.txt, response.txt, llm_response.json,
+claim.json, patch.diff, generation.json and frozen.sha256, followed by
+independent evaluation records. Hashes were checked before and after
+verification.
+
+Generation records retain model identifiers, UTC timestamps, token usage,
+latency and available error diagnostics. Original output text is preserved.
+Future repetitions must be documented as separate experimental runs.
 
 ## Freezing and verification
 
@@ -129,11 +149,9 @@ effects; it is not a separate measurement of network delay.
 
 ## Limitations and pending work
 
-- Complete and document the fifth required attempt.
-- Preserve tokens, generation timestamps, returned model identifier and
-  API errors in future generation records. These historical metadata
-  fields cannot be reconstructed reliably from response text alone.
-- Enforce separate, non-overwriting generation runs.
+- Full generation metadata is available for the fifth attempt.
+  Missing historical metadata cannot be reconstructed reliably.
+- The sample is small and was selected for benchmark compatibility.
 - Historical results include audited evidence and must be identified as such.
 - Passing Vul4Py checks establishes the benchmark's expected behavior;
   it does not prove the absence of all possible vulnerabilities.

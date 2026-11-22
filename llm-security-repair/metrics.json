@@ -1,12 +1,12 @@
 {
-  "attempts_recorded": 4,
-  "completed_observations": 3,
+  "attempts_recorded": 5,
+  "completed_observations": 4,
   "incomplete_observations": 1,
-  "positive_claims_completed": 3,
+  "positive_claims_completed": 4,
   "verified_repairs": 1,
-  "false_assurances": 2,
-  "VRR": 0.3333333333333333,
-  "FAR": 0.6666666666666666,
+  "false_assurances": 3,
+  "VRR": 0.25,
+  "FAR": 0.75,
   "incomplete_cases": [
     "CVE-2023-47163"
   ]
