@@ -157,3 +157,102 @@ effects; it is not a separate measurement of network delay.
   it does not prove the absence of all possible vulnerabilities.
 - Future experiments should increase the sample and document their
   model, prompt, benchmark revision and execution environment.
+
+## Configurable experiment extension
+
+The original five-attempt study remains separate from new experiments.
+
+experiment_config.json defines:
+- experiment_id: a separate study directory.
+- cases: selected benchmark case identifiers.
+- models: requested model identifiers.
+- repetitions: independent attempts per case and model.
+
+The current configuration plans 5 cases x 1 model x 3 repetitions = 15
+new attempts. These are planned observations, not experimental results.
+
+### Check the plan without API calls
+
+Run these commands from llm-security-repair:
+
+```bash
+python3.12 scripts/experiment_plan.py
+python3.12 scripts/check_experiment.py
+python scripts/run_experiment.py
+```
+
+The benchmark check requires status OK, actual passing functional tests
+and the prepared project directories.
+
+### Execute a separate experiment
+
+Execution makes billable API requests. Activate an environment containing
+the OpenAI SDK and configure OPENAI_API_KEY before execution.
+
+```bash
+source venv/bin/activate
+python scripts/run_experiment.py --execute
+```
+
+The controller registers the configuration, prompt hash, repository commit
+and planned trials before generation. It runs trials sequentially because
+Vul4Py uses shared temporary candidate directories and test logs.
+
+Each trial uses a separate directory for its model and repetition.
+The generator saves and freezes its response before evaluation.
+Integrity is checked before and after evaluation. Available test logs
+and JUnit reports are copied into the trial's test_evidence directory.
+
+Existing study directories are refused. Automatic resumption is not
+implemented. After interruption, preserve and inspect the existing
+records; do not delete them to repeat a submitted attempt.
+
+Do not run concurrent controllers or manual evaluations against the
+same workspaces.
+
+### Export the registered experiment
+
+After execution, including a partially completed execution:
+
+```bash
+python3.12 scripts/export_experiment.py \
+  --study vul4py/runs/extension_01
+```
+
+This creates results.csv and metrics.json inside that study directory.
+It does not replace the original five-attempt study's root-level files.
+
+Metrics are reported overall, by requested model, and by model and
+repetition. Incomplete and unstarted observations remain visible but
+are excluded from completed-observation denominators.
+
+VRR is undefined without completed observations.
+FAR is undefined without positive claims among completed observations.
+Undefined rates are represented by JSON null with an explanatory status.
+
+### Automated checks
+
+```bash
+python3.12 -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+The current suite contains 25 tests covering planning, integrity,
+trial processing, evidence export and metric denominators.
+The tests use temporary files and simulated responses, without API calls.
+
+The extension has been checked through unit tests and a planning run;
+these checks are not evidence of a completed live batch experiment.
+
+### Extension limitations
+
+The GPT generator currently requires one selected vulnerable source file
+per case. Supporting projects that require multiple input files needs
+a documented extension to source selection and prompt construction.
+
+Changing the configuration supports additional models and repetitions,
+but model access and API compatibility must be checked before execution.
+Increasing the sample also requires preparing and validating the
+additional benchmark cases.
+
+The example of 600 experiments describes possible future scale; it is
+not a result produced by this repository.
