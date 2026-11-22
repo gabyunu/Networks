@@ -1,0 +1,23 @@
+{
+  "case": "CVE-2024-53861",
+  "selected_at": "2026-11-22T21:17:20.684523+00:00",
+  "requested_model": "gpt-6-luna",
+  "selection_basis": "Benchmark checks completed before the new repair request",
+  "scan_result": {
+    "cve_id": "CVE-2024-53861",
+    "status": "OK",
+    "verdict_src": "struct+struct+struct+struct",
+    "func_vuln_rc": "0",
+    "func_fixed_rc": "0",
+    "exploit_vuln_rc": "1",
+    "exploit_fixed_rc": "0",
+    "fv_pfes": "175/0/0/115",
+    "ff_pfes": "176/0/0/115",
+    "ev_pfes": "70/1/0/2",
+    "ef_pfes": "71/0/0/2"
+  },
+  "context_files": [
+    "jwt/api_jwt.py"
+  ],
+  "prompt_sha256": "ca460a8d6854b780400382024847109064445de01e248c3b3114a7d4b7780323"
+}

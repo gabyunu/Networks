@@ -87,9 +87,6 @@ def collect_context_files(case_dir: Path, meta: dict, max_files: int = 4, max_by
 
 def build_user_prompt(vuln_id: str, meta: dict, files: List[tuple]) -> str:
     blocks = [
-        f"Vulnerability ID: {vuln_id}",
-        f"Repo: {meta.get('repo_url')}",
-        f"Fix commit (do not look it up; produce your own patch): {meta.get('fix_commit')}",
         "",
         "The vulnerable source files follow. Produce a single unified diff that",
         "patches the vulnerability while keeping the baseline tests passing.",
@@ -129,34 +126,67 @@ def call_claude(system: str, prompt: str, model: str) -> tuple:
 
 
 def call_gpt(system: str, prompt: str, model: str, temperature: float = 0.0) -> tuple:
-    from openai import OpenAI  # lazy
-    # Route through OpenRouter when OPENROUTER_API_KEY is set; otherwise use the
-    # stock OpenAI endpoint. OPENAI_BASE_URL overrides the endpoint explicitly.
-    or_key = os.environ.get("OPENROUTER_API_KEY")
-    base_url = os.environ.get("OPENAI_BASE_URL") or ("https://openrouter.ai/api/v1" if or_key else None)
-    api_key = or_key or os.environ.get("OPENAI_API_KEY")
-    client = OpenAI(base_url=base_url, api_key=api_key) if base_url else OpenAI()
-    t0 = time.time()
-    resp = client.chat.completions.create(
-        model=model,
-        temperature=temperature,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": prompt},
-        ],
-    )
-    elapsed = time.time() - t0
-    text = resp.choices[0].message.content or ""
-    usage = resp.usage
-    meta = {
-        "model": model,
-        "provider": "openrouter" if base_url and "openrouter" in base_url else "openai",
-        "input_tokens": getattr(usage, "prompt_tokens", None),
-        "output_tokens": getattr(usage, "completion_tokens", None),
-        "stop_reason": resp.choices[0].finish_reason,
-        "elapsed_s": elapsed,
+    from datetime import datetime, timezone
+    from openai import OpenAI
+
+    def utc_now():
+        return datetime.now(timezone.utc).isoformat()
+
+    info = {
+        "requested_model": model,
+        "model": None,
+        "request_started_at": None,
+        "response_received_at": None,
+        "input_tokens": None,
+        "output_tokens": None,
+        "total_tokens": None,
+        "api_latency_ms": None,
+        "elapsed_s": None,
+        "max_retries": 0,
+        "timeout_seconds": 120.0,
+        "error": None,
     }
-    return text, meta
+    started = None
+
+    try:
+        with OpenAI(max_retries=0, timeout=120.0) as client:
+            info["request_started_at"] = utc_now()
+            started = time.perf_counter()
+
+            response = client.responses.create(
+                model=model,
+                input=[{"role": "user", "content": prompt}],
+            )
+
+            elapsed = time.perf_counter() - started
+            usage = response.usage
+            info.update(
+                model=response.model,
+                response_received_at=utc_now(),
+                response_id=response.id,
+                request_id=getattr(response, "_request_id", None),
+                response_status=response.status,
+                input_tokens=getattr(usage, "input_tokens", None),
+                output_tokens=getattr(usage, "output_tokens", None),
+                total_tokens=getattr(usage, "total_tokens", None),
+                api_latency_ms=elapsed * 1000,
+                elapsed_s=elapsed,
+                raw_response=response.model_dump(mode="json"),
+            )
+            return response.output_text, info
+
+    except Exception as error:
+        info.update(
+            error=type(error).__name__,
+            http_status=getattr(error, "status_code", None),
+            request_id=getattr(error, "request_id", None),
+            finished_at=utc_now(),
+        )
+        if started is not None:
+            elapsed = time.perf_counter() - started
+            info["api_latency_ms"] = elapsed * 1000
+            info["elapsed_s"] = elapsed
+        return "", info
 
 
 # ---------- patch extraction ----------
@@ -182,7 +212,56 @@ def run_builtin(agent: str, model: str, vuln_id: str, case_dir: Path, out_dir: P
     files = collect_context_files(case_dir, meta)
     user = build_user_prompt(vuln_id, meta, files)
 
-    out_dir.mkdir(parents=True, exist_ok=True)
+    if agent == "gpt":
+        import hashlib
+
+        prompt_bytes = (HERE.parent / "experiment_prompt.txt").read_bytes()
+        expected_hash = "ca460a8d6854b780400382024847109064445de01e248c3b3114a7d4b7780323"
+        if hashlib.sha256(prompt_bytes).hexdigest() != expected_hash:
+            raise ValueError("Experimental prompt has changed")
+
+        if len(files) != 1:
+            raise ValueError("This protocol requires exactly one source file")
+
+        relative_file, source_code = files[0]
+        source_path = Path(relative_file)
+        benchmark_tests = set(
+            meta.get("baseline_test_files", [])
+            + meta.get("new_test_files", [])
+        )
+        if (
+            relative_file in benchmark_tests
+            or any(part.lower() in ("test", "tests") for part in source_path.parts)
+            or source_path.name.startswith("test_")
+            or source_path.name.endswith("_test.py")
+            or source_path.name == "conftest.py"
+        ):
+            raise ValueError("Test files must not be sent to the model")
+
+        user = (
+            prompt_bytes.decode("utf-8")
+            + f"\n\nVulnerable source file: {relative_file}\n\n"
+            + source_code
+        )
+
+    legacy_response = HERE.parent / "results" / vuln_id / "response.txt"
+    default_run = out_dir.parent.parent.resolve() == RUNS.resolve()
+
+    if agent == "gpt" and default_run and legacy_response.exists():
+        print(
+            f"[!] {vuln_id}: existing historical response; generation blocked.",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        out_dir.mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        print(
+            f"[!] {out_dir}: run directory already exists; generation blocked.",
+            file=sys.stderr,
+        )
+        return 2
     (out_dir / "prompt.txt").write_text(user, encoding="utf-8")
 
     try:
@@ -197,6 +276,85 @@ def run_builtin(agent: str, model: str, vuln_id: str, case_dir: Path, out_dir: P
         )
         print(f"[!] {vuln_id} {agent}: {e}", file=sys.stderr)
         return 1
+
+    if agent == "gpt":
+        import hashlib
+        from datetime import datetime, timezone
+
+        def save_json(name, data):
+            with (out_dir / name).open("x", encoding="utf-8") as file:
+                json.dump(data, file, indent=2)
+
+        info.update(
+            agent=agent,
+            vuln_id=vuln_id,
+            context_files=[relative for relative, _ in files],
+            prompt_sha256=hashlib.sha256(user.encode("utf-8")).hexdigest(),
+            source_sha256={
+                relative: hashlib.sha256(data.encode("utf-8")).hexdigest()
+                for relative, data in files
+            },
+        )
+
+        with (out_dir / "response.txt").open("x", encoding="utf-8") as file:
+            file.write(text)
+
+        raw_response = info.pop("raw_response", None)
+        if raw_response is not None:
+            save_json("llm_response.json", raw_response)
+
+        result = 1
+        if info.get("error"):
+            info["generation_status"] = "api_error"
+        elif info.get("response_status") != "completed":
+            info["generation_status"] = "incomplete_response"
+        else:
+            try:
+                data = json.loads(text)
+                if not isinstance(data, dict):
+                    raise ValueError("Response must be a JSON object")
+
+                C = data.get("success_claim")
+                P = data.get("confidence")
+                patch = data.get("patch")
+
+                if type(C) not in (bool, int) or C not in (0, 1):
+                    raise ValueError("Invalid success_claim")
+                if type(P) not in (int, float) or not 0 <= P <= 1:
+                    raise ValueError("Invalid confidence")
+                if not isinstance(patch, str):
+                    raise ValueError("Patch must be a string")
+
+                save_json("claim.json", {
+                    "success_claim": bool(C),
+                    "confidence": P,
+                })
+                with (out_dir / "patch.diff").open("x", encoding="utf-8") as file:
+                    file.write(patch)
+
+                info["generation_status"] = "ready_for_verification"
+                result = 0
+
+            except (ValueError, TypeError) as error:
+                info["generation_status"] = "invalid_response"
+                info["parse_error"] = str(error)
+
+        info["frozen_at"] = datetime.now(timezone.utc).isoformat()
+        save_json("generation.json", info)
+
+        names = [
+            "prompt.txt", "response.txt", "llm_response.json",
+            "claim.json", "patch.diff", "generation.json",
+        ]
+        with (out_dir / "frozen.sha256").open("x", encoding="utf-8") as manifest:
+            for name in names:
+                path = out_dir / name
+                if path.is_file():
+                    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                    manifest.write(f"{digest}  {name}\n")
+
+        print(f"[generation] {vuln_id}: {info['generation_status']}")
+        return result
 
     diff = extract_diff(text)
     (out_dir / "patch.diff").write_text(diff, encoding="utf-8")

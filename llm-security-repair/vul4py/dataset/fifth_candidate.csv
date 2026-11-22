@@ -1,0 +1,2 @@
+vuln_id,repo_url,fix_commit
+CVE-2024-53861,https://github.com/jpadilla/pyjwt,33022c25525c1020869c71ce2a4109e44ae4ced1

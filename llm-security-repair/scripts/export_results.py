@@ -61,17 +61,30 @@ columns = [
     "notes",
 ]
 
+generation_fields = [
+    "input_tokens", "output_tokens", "total_tokens",
+    "request_started_at", "response_received_at", "finished_at",
+    "generation_status", "error", "http_status", "request_id",
+]
+columns.extend(["requested_model", "returned_model"] + generation_fields)
 rows = []
 
-for case_dir in sorted(RESULTS_DIR.iterdir()):
-    if not case_dir.is_dir():
-        continue
+case_ids = set()
+for directory in (RESULTS_DIR, EVAL_DIR):
+    if directory.exists():
+        case_ids.update(
+            path.name for path in directory.iterdir() if path.is_dir()
+        )
 
-    cve = case_dir.name
+for cve in sorted(case_ids):
+    case_dir = RESULTS_DIR / cve
+    if not (case_dir / "response.txt").is_file():
+        case_dir = EVAL_DIR / cve
     response_path = case_dir / "response.txt"
     claim_path = case_dir / "claim.json"
     patch_path = case_dir / "patch.diff"
     latency_path = case_dir / "latency_ms.txt"
+    generation = read_json(case_dir / "generation.json")
 
     if not response_path.exists():
         continue
@@ -80,7 +93,7 @@ for case_dir in sorted(RESULTS_DIR.iterdir()):
     meta_path = ROOT / "vul4py" / "workspaces" / cve / "meta.json"
     meta = read_json(meta_path)
 
-    files = meta.get("new_code_files", [])
+    files = generation.get("context_files") or meta.get("new_code_files", [])
     vulnerable_file = files[0] if files else ""
 
     if vulnerable_file:
@@ -101,6 +114,8 @@ for case_dir in sorted(RESULTS_DIR.iterdir()):
 
     if not evaluation:
         evaluation_status = "not_evaluated"
+    elif evaluation.get("verification_status") == "incomplete":
+        evaluation_status = "incomplete"
     elif not evaluation.get("apply_ok", False):
         evaluation_status = "patch_not_applied"
     elif (
@@ -128,13 +143,17 @@ for case_dir in sorted(RESULTS_DIR.iterdir()):
         "cve": cve,
         "project": project,
         "vulnerable_file": vulnerable_file,
-        "model": model,
+        "model": generation.get("requested_model") or model,
+        "requested_model": generation.get("requested_model") or model,
+        "returned_model": generation.get("model", ""),
         "response_saved": "yes",
         "response_parse_status": parse_status,
         "success_claim": bool_text(claim.get("success_claim")),
         "confidence": claim.get("confidence", ""),
         "patch_saved": "yes" if patch_path.exists() else "no",
-        "api_latency_ms": read_text(latency_path),
+        "api_latency_ms": generation.get(
+            "api_latency_ms", read_text(latency_path)
+        ),
         "patch_applied": bool_text(evaluation.get("apply_ok")),
         "functional_rc": evaluation.get("functional_rc", ""),
         "security_rc": evaluation.get("exploit_rc", ""),
@@ -148,6 +167,10 @@ for case_dir in sorted(RESULTS_DIR.iterdir()):
         "verified_repair": evaluation.get("verified_repair", ""),
         "false_assurance": evaluation.get("false_assurance", ""),
         "notes": " ".join(notes),
+        **{
+            key: generation.get(key, "")
+            for key in generation_fields
+        },
     })
 
 with OUTPUT.open("w", newline="", encoding="utf-8") as f:
