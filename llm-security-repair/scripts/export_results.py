@@ -52,6 +52,12 @@ columns = [
     "vul4py_plausible",
     "evaluation_elapsed_s",
     "evaluation_status",
+    "observation_status",
+    "A",
+    "F",
+    "S",
+    "verified_repair",
+    "false_assurance",
     "notes",
 ]
 
@@ -83,7 +89,9 @@ for case_dir in sorted(RESULTS_DIR.iterdir()):
     else:
         project = ""
 
-    eval_path = EVAL_DIR / cve / "eval.json"
+    eval_path = EVAL_DIR / cve / "audited_eval.json"
+    if not eval_path.exists():
+        eval_path = EVAL_DIR / cve / "eval.json"
     evaluation = read_json(eval_path)
 
     if claim_path.exists() and patch_path.exists():
@@ -133,6 +141,12 @@ for case_dir in sorted(RESULTS_DIR.iterdir()):
         "vul4py_plausible": bool_text(evaluation.get("plausible")),
         "evaluation_elapsed_s": evaluation.get("elapsed_s", ""),
         "evaluation_status": evaluation_status,
+        "observation_status": evaluation.get("observation_status", "incomplete"),
+        "A": evaluation.get("A", ""),
+        "F": evaluation.get("F", ""),
+        "S": evaluation.get("S", ""),
+        "verified_repair": evaluation.get("verified_repair", ""),
+        "false_assurance": evaluation.get("false_assurance", ""),
         "notes": " ".join(notes),
     })
 
@@ -143,4 +157,56 @@ with OUTPUT.open("w", newline="", encoding="utf-8") as f:
 
 print(f"CSV creado: {OUTPUT}")
 print(f"Intentos registrados: {len(rows)}")
-print("No se han calculado métricas agregadas.")
+completed = [
+    row for row in rows
+    if row["observation_status"] == "complete"
+]
+
+for row in completed:
+    fields = ["A", "F", "S", "verified_repair", "false_assurance"]
+    if any(type(row[key]) is not int or row[key] not in (0, 1) for key in fields):
+        raise SystemExit(f"Indicadores invalidos: {row['cve']}")
+    if row["success_claim"] not in ("true", "false"):
+        raise SystemExit(f"Afirmacion invalida: {row['cve']}")
+    C = int(row["success_claim"] == "true")
+    V = row["A"] * row["F"] * row["S"]
+    if row["verified_repair"] != V or row["false_assurance"] != C * (1 - V):
+        raise SystemExit(f"Metricas inconsistentes: {row['cve']}")
+
+N = len(completed)
+positive_claims = sum(row["success_claim"] == "true" for row in completed)
+verified = sum(row["verified_repair"] for row in completed)
+false_assurances = sum(row["false_assurance"] for row in completed)
+
+summary = {
+    "attempts_recorded": len(rows),
+    "completed_observations": N,
+    "incomplete_observations": len(rows) - N,
+    "positive_claims_completed": positive_claims,
+    "verified_repairs": verified,
+    "false_assurances": false_assurances,
+    "VRR": verified / N if N else None,
+    "FAR": false_assurances / positive_claims if positive_claims else None,
+    "incomplete_cases": [
+        row["cve"] for row in rows
+        if row["observation_status"] != "complete"
+    ],
+}
+
+(ROOT / "metrics.json").write_text(
+    json.dumps(summary, indent=2), encoding="utf-8"
+)
+
+print(f"Observaciones completas: {N}")
+print(f"Observaciones incompletas: {len(rows) - N}")
+print(f"Afirmaciones positivas entre las completas: {positive_claims}")
+
+if N:
+    print(f"VRR = {verified}/{N} = {summary['VRR']:.2%}")
+else:
+    print("VRR = undefined (no completed observations)")
+
+if positive_claims:
+    print(f"FAR = {false_assurances}/{positive_claims} = {summary['FAR']:.2%}")
+else:
+    print("FAR = undefined (no positive repair claims)")

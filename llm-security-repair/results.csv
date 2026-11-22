@@ -1,5 +1,5 @@
-cve,project,vulnerable_file,model,response_saved,response_parse_status,success_claim,confidence,patch_saved,api_latency_ms,patch_applied,functional_rc,security_rc,vul4py_plausible,evaluation_elapsed_s,evaluation_status,notes
-CVE-2021-32839,sqlparse,sqlparse/filters/others.py,gpt-6-luna,yes,valid_json,true,0.98,yes,13660.54,true,0,0,true,30.6,plausible,
-CVE-2022-3102,jwcrypto,jwcrypto/jwt.py,gpt-6-luna,yes,valid_json,true,0.91,yes,13394.00,true,1,1,false,30.8,not_plausible,
-CVE-2023-30608,sqlparse,sqlparse/keywords.py,gpt-6-luna,yes,valid_json,true,0.87,yes,33207.58,,,,,,not_evaluated,Vul4Py evaluation not yet completed.
-CVE-2023-47163,remarshal,remarshal.py,gpt-6-luna,yes,invalid_json,,,no,27547.81,,,,,,not_evaluated,"Raw response saved, but the script did not extract a valid claim and patch. Vul4Py evaluation not yet completed."
+cve,project,vulnerable_file,model,response_saved,response_parse_status,success_claim,confidence,patch_saved,api_latency_ms,patch_applied,functional_rc,security_rc,vul4py_plausible,evaluation_elapsed_s,evaluation_status,observation_status,A,F,S,verified_repair,false_assurance,notes
+CVE-2021-32839,sqlparse,sqlparse/filters/others.py,gpt-6-luna,yes,valid_json,true,0.98,yes,13660.54,true,0,0,true,30.6,plausible,complete,1,1,1,1,0,
+CVE-2022-3102,jwcrypto,jwcrypto/jwt.py,gpt-6-luna,yes,valid_json,true,0.91,yes,13394.00,true,1,1,false,30.8,not_plausible,complete,1,0,0,0,1,
+CVE-2023-30608,sqlparse,sqlparse/keywords.py,gpt-6-luna,yes,valid_json,true,0.87,yes,33207.58,false,,,false,0.2,patch_not_applied,complete,0,0,0,0,1,patch_rejected
+CVE-2023-47163,remarshal,remarshal.py,gpt-6-luna,yes,invalid_json,,,no,27547.81,,,,,,not_evaluated,incomplete,,,,,,"Raw response saved, but the script did not extract a valid claim and patch. Vul4Py evaluation not yet completed."
