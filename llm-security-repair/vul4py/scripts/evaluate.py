@@ -13,7 +13,9 @@ Verdict fields:
     apply_ok            -- did the patch apply cleanly?
     functional_rc       -- exit code of baseline tests on candidate (0 = pass)
     exploit_rc          -- exit code of exploit tests on candidate
-    plausible           -- apply_ok AND functional_rc in (0,999) AND exploit_rc == 0
+    A, F, S             -- patch, functional, security indicators; None if incomplete
+    verification_status -- complete or incomplete
+    plausible           -- patch applies and both suites pass with test evidence
     notes               -- error string if any
 
 This script wraps scripts/vul4py.py for actual setup / test / fork / patch work,
@@ -29,6 +31,8 @@ import sys
 import time
 from pathlib import Path
 from typing import List, Optional
+from oracle_status import classify_oracle, repair_metrics
+from vul4py import _parse_junit
 
 HERE = Path(__file__).resolve().parent.parent
 WORKSPACES = HERE / "workspaces"
@@ -65,24 +69,78 @@ def evaluate_one(workspaces: Path, runs: Path, agent: str, vuln_id: str) -> dict
         "agent": agent,
         "vuln_id": vuln_id,
         "apply_ok": False,
+        "A": None,
+        "patch_application_status": "not_run",
+        "patch_command_rc": None,
         "functional_rc": None,
         "exploit_rc": None,
         "plausible": False,
+        "verification_status": "incomplete",
+        "functional_status": "not_run",
+        "security_status": "not_run",
+        "functional_counts": None,
+        "security_counts": None,
+        "F": None,
+        "S": None,
         "elapsed_s": None,
         "notes": "",
     }
+    def save_verdict():
+        C = None
+        confidence = None
+        claim_error = ""
+        try:
+            claim = json.loads(
+                (run_dir / "claim.json").read_text(encoding="utf-8")
+            )
+            if not isinstance(claim, dict):
+                raise ValueError("Claim must be a JSON object")
+            value = claim.get("success_claim")
+            probability = claim.get("confidence")
+            if type(value) not in (bool, int) or value not in (0, 1):
+                raise ValueError("Invalid success_claim")
+            if (
+                type(probability) not in (int, float)
+                or not 0 <= probability <= 1
+            ):
+                raise ValueError("Invalid confidence")
+            C = int(value)
+            confidence = probability
+        except (OSError, ValueError) as error:
+            claim_error = str(error)
+
+        V, FA = repair_metrics(
+            verdict["A"], verdict["F"], verdict["S"],
+            C, verdict["verification_status"]
+        )
+        verdict.update(
+            claimed_success=C,
+            confidence=confidence,
+            claim_error=claim_error,
+            verified_repair=V,
+            false_assurance=FA,
+            observation_status=(
+                "complete"
+                if verdict["verification_status"] == "complete" and C is not None
+                else "incomplete"
+            ),
+        )
+        eval_path.write_text(
+            json.dumps(verdict, indent=2), encoding="utf-8"
+        )
+
     log: list = []
     t0 = time.time()
 
     if not case_dir.exists() or not (case_dir / "meta.json").exists():
         verdict["notes"] = f"no workspace at {case_dir}"
         eval_path.parent.mkdir(parents=True, exist_ok=True)
-        eval_path.write_text(json.dumps(verdict, indent=2), encoding="utf-8")
+        save_verdict()
         return verdict
     if not patch.exists():
         verdict["notes"] = f"no patch at {patch}"
         eval_path.parent.mkdir(parents=True, exist_ok=True)
-        eval_path.write_text(json.dumps(verdict, indent=2), encoding="utf-8")
+        save_verdict()
         return verdict
 
     dst_name = f"{agent}_candidate"
@@ -100,14 +158,66 @@ def evaluate_one(workspaces: Path, runs: Path, agent: str, vuln_id: str) -> dict
         log,
     )
     if fork.returncode != 0:
-        verdict["notes"] = "patch did not apply"
+        details = ""
+        patch_rc = None
+        application_error = "Failed to apply patch" in (fork.stderr or "")
+        if application_error:
+            try:
+                patch_log = case_dir / "logs" / f"patch_{dst_name}.log"
+                details = patch_log.read_text(encoding="utf-8", errors="replace")
+                shutil.copy2(patch_log, run_dir / "patch_apply.log")
+                exits = [
+                    line for line in details.splitlines()
+                    if line.startswith("[exit ") and line.endswith("]")
+                ]
+                if len(exits) == 1:
+                    patch_rc = int(exits[0][6:-1])
+            except (OSError, ValueError):
+                patch_rc = None
+
+        environment_errors = (
+            "permission denied", "no space left", "read-only file system",
+            "cannot allocate memory", "too many open files",
+            "disk quota exceeded", "input/output error",
+        )
+        error_text = ((fork.stderr or "") + details).lower()
+        known_rejections = (
+            "malformed patch", "corrupt patch", "patch does not apply",
+            "unexpected end of file in patch", "only garbage was found",
+            "can't find file to patch", "no file to patch", "patch failed:",
+        )
+        known_rejection = (
+            any(message in error_text for message in known_rejections)
+            or ("hunk #" in error_text and "failed" in error_text)
+        )
+        rejected = (
+            application_error and patch_rc is not None and patch_rc > 0
+            and known_rejection
+            and not any(message in error_text for message in environment_errors)
+        )
+        verdict["patch_command_rc"] = patch_rc
+        verdict["patch_application_status"] = (
+            "rejected" if rejected else "incomplete"
+        )
+        verdict["notes"] = (
+            "patch_rejected" if rejected else "patch_application_incomplete"
+        )
+        if rejected:
+            verdict.update(
+                A=0, F=0, S=0, verification_status="complete",
+                functional_reason="patch_rejected",
+                security_reason="patch_rejected",
+            )
         log_path.write_text("\n".join(log) + "\n", encoding="utf-8")
         verdict["elapsed_s"] = round(time.time() - t0, 1)
-        eval_path.write_text(json.dumps(verdict, indent=2), encoding="utf-8")
+        save_verdict()
         cleanup_candidate(case_dir, dst_name)
         return verdict
 
     verdict["apply_ok"] = True
+    verdict["A"] = 1
+    verdict["patch_application_status"] = "applied"
+    verdict["patch_command_rc"] = 0
 
     func = run_vul4py(
         [
@@ -119,7 +229,7 @@ def evaluate_one(workspaces: Path, runs: Path, agent: str, vuln_id: str) -> dict
         log,
     )
     # The CLI doesn't surface the inner rc cleanly; parse it from stdout.
-    func_rc = parse_rc(func.stdout, "rc=")
+    func_rc = parse_rc(func.stdout, "rc=") if func.returncode == 0 else None
     verdict["functional_rc"] = func_rc
 
     expl = run_vul4py(
@@ -131,19 +241,58 @@ def evaluate_one(workspaces: Path, runs: Path, agent: str, vuln_id: str) -> dict
         ],
         log,
     )
-    expl_rc = parse_rc(expl.stdout, "rc=")
+    expl_rc = parse_rc(expl.stdout, "rc=") if expl.returncode == 0 else None
     verdict["exploit_rc"] = expl_rc
 
-    verdict["plausible"] = (
-        verdict["apply_ok"]
-        and (verdict["functional_rc"] in (0, 999))
-        and (verdict["exploit_rc"] == 0)
+    def read_report(filename, command_rc):
+        if command_rc != 0:
+            return None
+        try:
+            return _parse_junit(case_dir / "logs" / filename)
+        except (OSError, ValueError, TypeError):
+            return None
+
+    functional_summary = read_report(
+        f"functional_{dst_name}.junit.xml", func.returncode
     )
+    security_summary = read_report(
+        f"exploit_{dst_name}.junit.xml", expl.returncode
+    )
+    f_status, f_value, f_reason = classify_oracle(
+        func_rc if func.returncode == 0 else None, functional_summary
+    )
+    s_status, s_value, s_reason = classify_oracle(
+        expl_rc if expl.returncode == 0 else None, security_summary
+    )
+    complete = (
+        f_status in ("passed", "failed")
+        and s_status in ("passed", "failed")
+    )
+    verdict.update(
+        verification_status="complete" if complete else "incomplete",
+        functional_status=f_status,
+        security_status=s_status,
+        functional_reason=f_reason,
+        security_reason=s_reason,
+        functional_counts=functional_summary,
+        security_counts=security_summary,
+        functional_command_rc=func.returncode,
+        security_command_rc=expl.returncode,
+        F=f_value,
+        S=s_value,
+    )
+    verdict["plausible"] = (
+        verdict["apply_ok"] and f_value == 1 and s_value == 1
+    )
+    if not complete:
+        verdict["notes"] = (
+            f"functional: {f_reason}; security: {s_reason}"
+        )
 
     cleanup_candidate(case_dir, dst_name)
     log_path.write_text("\n".join(log) + "\n", encoding="utf-8")
     verdict["elapsed_s"] = round(time.time() - t0, 1)
-    eval_path.write_text(json.dumps(verdict, indent=2), encoding="utf-8")
+    save_verdict()
     return verdict
 
 
@@ -180,7 +329,10 @@ def main():
     n_plaus = 0
     for vid in targets:
         v = evaluate_one(args.workspaces, args.runs, args.agent, vid)
-        flag = "PLAUSIBLE" if v["plausible"] else "FAIL"
+        flag = (
+            "INCOMPLETE" if v["verification_status"] == "incomplete"
+            else ("PLAUSIBLE" if v["plausible"] else "FAIL")
+        )
         print(
             f"  {args.agent}/{vid}: {flag} "
             f"apply={v['apply_ok']} func_rc={v['functional_rc']} expl_rc={v['exploit_rc']} "
